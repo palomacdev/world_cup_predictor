@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import warnings
 from pathlib import Path
+from fastapi.middleware.cors import CORSMiddleware
 
 # Suprime avisos
 warnings.filterwarnings('ignore', category=UserWarning)
@@ -15,6 +16,21 @@ BASE_DIR = Path(__file__).resolve().parent
 ARTIFACTS_DIR = BASE_DIR / "artifacts"
 
 app = FastAPI(title="Preditor da Copa do Mundo API")
+
+# Origens do frontend
+origins = [
+    "https://lonely-werewolf-gv5jw6vqjxvc7wv-5173.app.github.dev", # codespace do github
+    "http://localhost",
+    "http://127.0.0.1:5173", # Outra forma de acessar o Svelte
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins, # Permite as origens da lista
+    allow_credentials=True,
+    allow_methods=["*"], # Permite todos os métodos (GET, POST, etc.)
+    allow_headers=["*"], # Permite todos os cabeçalhos
+)
 
 # Carrega os artefatos 
 # Isso garante que eles fiquem na memória e sejam rápidos
