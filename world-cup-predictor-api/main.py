@@ -48,6 +48,33 @@ except FileNotFoundError:
     print("ERRO: Arquivos de artefatos não encontrados. Verifique a pasta /artifacts")
     model, ranking_df, stats_df = None, None, None
 
+# Mapeamento de Times (Atualizando: adicionando conforme necessário)
+MAPA_TIMES = {
+    "brasil": "Brazil",
+    "brazil": "Brazil",
+    "alemanha": "Germany",
+    "germany": "Germany",
+    "argentina": "Argentina",
+    "inglaterra": "England",
+    "england": "England",
+    "frança": "France",
+    "france": "France",
+    "eua": "United States",
+    "usa": "United States",
+    "united states": "United States",
+    "espanha": "Spain",
+    "spain": "Spain",
+    "portugal": "Portugal",
+    "holanda": "Netherlands",
+    "netherlands": "Netherlands",
+    "italia": "Italy",
+    "italy": "Italy",
+    "japao": "Japan",
+    "japan": "Japan"
+}
+
+print("Mapeamento de nomes de times carregado")
+
 # --- 2. Funções Auxiliares (do notebook) ---
 
 def get_latest_rank(team_name, df):
@@ -63,6 +90,15 @@ def get_latest_stats(team_name, df):
         return stats['avg_scored'], stats['avg_conceded']
     except IndexError:
         return 0, 0 # Retorna 0 por padrão
+
+def normalize_team_name(name: str) -> str:
+    """
+    Converte o input do usuário (ex: 'brasil', 'EUA') para o nome
+    oficial usado nos dataframes (ex: 'Brazil', 'United States').
+    """
+    normalize_input = name.lower().strip()
+
+    return MAPA_TIMES.get(normalize_input, name.title())
 
 # --- 3. Definição do "Schema" de Entrada (Pydantic) ---
 
@@ -81,12 +117,18 @@ def predict_match(jogo: JogoInput):
     if model is None:
         return {"erro": "Modelo não foi carregado. Verifique os logs."}
 
-    # 1. Coletar dados (exatamente como na função do notebook)
-    rank_home = get_latest_rank(jogo.time_casa, ranking_df)
-    avg_scored_home, avg_conceded_home = get_latest_stats(jogo.time_casa, stats_df)
     
-    rank_away = get_latest_rank(jogo.time_visitante, ranking_df)
-    avg_scored_away, avg_conceded_away = get_latest_stats(jogo.time_visitante, stats_df)
+    # Normaliza os nomes ANTES de usá-los
+    time_casa_oficial = normalize_team_name(jogo.time_casa)
+    time_visitante_oficial = normalize_team_name(jogo.time_visitante)
+    
+
+    # 1. Coletar dados (usando os nomes oficiais normalizados)
+    rank_home = get_latest_rank(time_casa_oficial, ranking_df)
+    avg_scored_home, avg_conceded_home = get_latest_stats(time_casa_oficial, stats_df)
+    
+    rank_away = get_latest_rank(time_visitante_oficial, ranking_df)
+    avg_scored_away, avg_conceded_away = get_latest_stats(time_visitante_oficial, stats_df)
 
     # 2. Montar o vetor de features
     dados_jogo = {
@@ -107,7 +149,13 @@ def predict_match(jogo: JogoInput):
     resultado_provavel = mapa_resultados[probabilidades.argmax()]
 
     response = {
+        # Mantém os nomes originais para o usuário ver
         "jogo": f"{jogo.time_casa} vs. {jogo.time_visitante}",
+        
+        
+        "nomes_oficiais_usados": f"{time_casa_oficial} vs. {time_visitante_oficial}",
+       
+
         "probabilidades": {
             "vitoria_casa": round(probabilidades[0], 4),
             "empate": round(probabilidades[1], 4),
